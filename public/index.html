@@ -264,7 +264,7 @@
     <header id="home" class="relative min-h-screen flex items-center justify-center text-center overflow-hidden">
         <canvas id="hero-canvas" class="hero-canvas"></canvas>
         <div class="hero-content p-6">
-            <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4 animate-fade-in-up">
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight mb-4 animate-fade-in-up">
                 Your Future, Your Path, Powered by AI.
             </h1>
             <p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8 animate-fade-in-up" style="animation-delay: 0.5s;">
@@ -453,14 +453,14 @@
                 <!-- Bar Chart -->
                 <div class="p-8 card-bg">
                     <h3 class="text-2xl font-semibold mb-4 text-white">Popular Career Paths</h3>
-                    <div class="relative h-96">
+                    <div class="relative h-80 sm:h-96">
                         <canvas id="career-paths-chart"></canvas>
                     </div>
                 </div>
                 <!-- Doughnut Chart -->
                 <div class="p-8 card-bg">
                     <h3 class="text-2xl font-semibold mb-4 text-white">Top Skills in Demand</h3>
-                    <div class="relative h-96">
+                    <div class="relative h-80 sm:h-96">
                         <canvas id="skills-demand-chart"></canvas>
                     </div>
                 </div>
@@ -522,8 +522,8 @@
                         <div>
                             <textarea id="contact-message" rows="5" placeholder="Your Message" class="w-full p-4 form-input rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0]" required></textarea>
                         </div>
-                        <button type="submit" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300">
-                            Send Message
+                        <button type="submit" id="contact-submit-btn" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300" disabled>
+                            Connecting...
                         </button>
                         <div id="contact-form-status" class="mt-4 text-center text-sm"></div>
                     </form>
@@ -596,6 +596,7 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let db, auth, userId;
+        let isFirebaseReady = false;
 
         // --- Firebase Initialization and Authentication Logic ---
         function initializeFirebase() {
@@ -603,10 +604,18 @@
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                
+                const contactSubmitBtn = document.getElementById('contact-submit-btn');
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
+                        isFirebaseReady = true;
+                        // Enable the contact form button once authenticated
+                        if (contactSubmitBtn) {
+                            contactSubmitBtn.disabled = false;
+                            contactSubmitBtn.textContent = 'Send Message';
+                        }
                     } else {
                         if (!initialAuthToken) {
                             await signInAnonymously(auth);
@@ -740,14 +749,17 @@
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitButton = contactForm.querySelector('button[type="submit"]');
-            if (!auth || !db || !userId) {
+
+            if (!isFirebaseReady) {
                 contactFormStatus.textContent = 'Connecting to the server, please wait a moment and try again.';
                 contactFormStatus.className = 'mt-4 text-center text-sm text-yellow-400';
                 return;
             }
+
             submitButton.disabled = true;
             submitButton.textContent = 'Sending...';
             contactFormStatus.textContent = '';
+
             try {
                 await addDoc(collection(db, `artifacts/${appId}/public/data/contacts`), {
                     name: document.getElementById('contact-name').value,
@@ -763,8 +775,10 @@
                 contactFormStatus.textContent = 'Sorry, something went wrong. Please try again.';
                 contactFormStatus.className = 'mt-4 text-center text-sm text-red-400';
             } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Send Message';
+                if(isFirebaseReady) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Send Message';
+                }
             }
         });
         closeContactModalBtn.addEventListener('click', () => contactConfirmationModal.classList.add('hidden'));
@@ -995,15 +1009,28 @@
                         labels: ['Software Dev', 'Data Science', 'UX/UI Design', 'Project Mgmt', 'Marketing'],
                         datasets: [{
                             label: '# of Students Interested',
-                            data: [120, 95, 70, 65, 50],
+                            data: [100, 95, 70, 65, 50],
                             backgroundColor: 'rgba(44, 182, 125, 0.6)',
                             borderColor: 'rgba(44, 182, 125, 1)',
                             borderWidth: 1
                         }]
                     },
                     options: {
-                        indexAxis: 'y',
-                        scales: { y: { ticks: { color: '#ecf0f1' } }, x: { ticks: { color: '#ecf0f1' } } },
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        indexAxis: 'x', 
+                        scales: { 
+                            y: { 
+                                beginAtZero: true,
+                                max: 110,
+                                ticks: { color: '#ecf0f1' },
+                                grid: { color: 'rgba(236, 240, 241, 0.1)' }
+                            }, 
+                            x: { 
+                                ticks: { color: '#ecf0f1' },
+                                grid: { color: 'rgba(236, 240, 241, 0.1)' }
+                            } 
+                        },
                         plugins: { legend: { display: false } }
                     }
                 });
@@ -1024,6 +1051,8 @@
                         }]
                     },
                     options: {
+                         maintainAspectRatio: false,
+                         responsive: true,
                          plugins: { legend: { position: 'bottom', labels: { color: '#ecf0f1' } } }
                     }
                 });
@@ -1086,5 +1115,4 @@
     </script>
 </body>
 </html>
-
 
