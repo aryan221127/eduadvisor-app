@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One-Stop Personalized Career & Education Advisor</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN for 3D animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js for radar chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0a28;
+            color: #ecf0f1;
+            overflow-x: hidden;
+        }
+        .hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        .navbar-scrolled {
+            background-color: rgba(13, 10, 40, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .scroll-animation {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .scroll-animation.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .card-bg {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+        .glow-button {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .glow-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(236, 240, 241, 0.2), transparent);
+            transition: left 0.6s;
+        }
+        .glow-button:hover::before {
+            left: 100%;
+        }
+        .modal {
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .modal.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .quiz-option:hover {
+            transform: translateY(-5px);
+        }
+        .quiz-option.selected {
+            border-color: #5d51f2;
+            background-color: rgba(93, 81, 242, 0.1);
+        }
+        .quiz-progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+        .form-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .form-input {
+            background: rgba(13, 10, 40, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ecf0f1;
+        }
+        /* --- Chatbot Styles --- */
+        #chat-bubble {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background-color: #7f5af0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: transform 0.3s ease-in-out;
+        }
+        #chat-bubble:hover {
+            transform: scale(1.1);
+        }
+        #chat-window {
+            position: fixed;
+            bottom: 6rem;
+            right: 2rem;
+            width: 90%;
+            max-width: 400px;
+            height: 60vh;
+            max-height: 500px;
+            background-color: #1a1639;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            pointer-events: none;
+        }
+        #chat-window.open {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .chat-header {
+            background-color: #7f5af0;
+            padding: 1rem;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .chat-message {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-message.user {
+            align-items: flex-end;
+        }
+        .chat-message.bot {
+            align-items: flex-start;
+        }
+        .chat-message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+        .chat-message.user .chat-message-bubble {
+            background-color: #5d51f2;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-message.bot .chat-message-bubble {
+            background-color: #2b284e;
+            color: #ecf0f1;
+            border-bottom-left-radius: 4px;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border-radius: 20px;
+            border: none;
+            background-color: #0d0a28;
+            color: white;
+            outline: none;
+        }
+        .chat-send-btn {
+            margin-left: 0.5rem;
+            background: none;
+            border: none;
+            color: #7f5af0;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+            padding-left: 2rem;
+            border-left: 2px solid #5d51f2;
+        }
+        .timeline-item:last-child {
+            border-left: 2px solid transparent;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -9px;
+            top: 4px;
+            width: 16px;
+            height: 16px;
+            background-color: #2cb67d;
+            border-radius: 50%;
+            border: 2px solid #1a1639;
+        }
+    </style>
+</head>
+<body class="bg-[#0d0a28] text-white">
+
+    <!-- Navigation Bar -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-[#00ffff] transition-colors duration-300 hover:text-[#ff3399]">EduAdvisor.Ai</a>
+            <div class="hidden md:flex space-x-8">
+                <a href="#home" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Home</a>
+                <a href="#features" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Features</a>
+                <a href="#demo" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Demo</a>
+                <a href="#dashboard-section" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Dashboard</a>
+                <a href="#quiz" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Quiz</a>
+                <a href="#analytics" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Analytics</a>
+                <a href="#contact" class="text-white hover:text-[#7f5af0] transition-colors duration-300">Contact</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-white focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-[#0d0a28] bg-opacity-95 backdrop-blur-md">
+            <a href="#home" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Home</a>
+            <a href="#features" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Features</a>
+            <a href="#demo" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Demo</a>
+            <a href="#dashboard-section" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Dashboard</a>
+            <a href="#quiz" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Quiz</a>
+            <a href="#analytics" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Analytics</a>
+            <a href="#contact" class="block py-4 px-6 text-white hover:bg-gray-800 transition-colors duration-300">Contact</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="home" class="relative min-h-screen flex items-center justify-center text-center overflow-hidden">
+        <canvas id="hero-canvas" class="hero-canvas"></canvas>
+        <div class="hero-content p-6">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4 animate-fade-in-up">
+                Your Future, Your Path, Powered by AI.
+            </h1>
+            <p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8 animate-fade-in-up" style="animation-delay: 0.5s;">
+                Discover your perfect career and education journey with personalized, intelligent guidance.
+            </p>
+            <a href="#demo" class="glow-button px-8 py-3 text-lg font-semibold rounded-full bg-[#7f5af0] text-white transition-transform transform hover:scale-105 duration-300 ease-in-out">
+                Get Started
+            </a>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 md:py-32 px-6">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0] scroll-animation">
+                What We Offer
+            </h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-16 scroll-animation" style="animation-delay: 0.2s;">
+                A suite of powerful tools to guide your journey.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature Card 1 -->
+                <div class="p-6 card-bg scroll-animation">
+                    <div class="mb-4 text-4xl text-[#2cb67d]">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">AI Recommendation Engine</h3>
+                    <p class="text-gray-400">Receive smart, data-driven suggestions for careers and courses based on your unique profile.</p>
+                </div>
+                <!-- Feature Card 2 -->
+                <div class="p-6 card-bg scroll-animation" style="animation-delay: 0.2s;">
+                    <div class="mb-4 text-4xl text-[#2cb67d]">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Personalized Dashboard</h3>
+                    <p class="text-gray-400">Track your progress, manage your skills, and see a visual representation of your journey.</p>
+                </div>
+                <!-- Feature Card 3 -->
+                <div class="p-6 card-bg scroll-animation" style="animation-delay: 0.4s;">
+                    <div class="mb-4 text-4xl text-[#2cb67d]">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Chatbot Career Counselor</h3>
+                    <p class="text-gray-400">Get instant, multilingual advice from our AI counselor, available 24/7.</p>
+                </div>
+                <!-- Feature Card 4 -->
+                <div class="p-6 card-bg scroll-animation" style="animation-delay: 0.6s;">
+                    <div class="mb-4 text-4xl text-[#2cb67d]">
+                        <i class="fas fa-user-friends"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Analytics for Institutions</h3>
+                    <p class="text-gray-400">Counselors and institutions can gain insights into student needs and popular career paths.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section id="demo" class="py-20 md:py-32 px-6">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0] scroll-animation">
+                See It In Action
+            </h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-12 scroll-animation" style="animation-delay: 0.2s;">
+                Enter your interests below to get a taste of your future.
+            </p>
+            <div class="max-w-3xl mx-auto p-8 card-bg scroll-animation" style="animation-delay: 0.4s;">
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <input type="text" id="interests-input" placeholder="e.g., I like maths, coding, and problem-solving" class="flex-grow p-4 bg-[#1a1639] border border-[#5d51f2] rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0] text-white">
+                    <button id="get-recommendations-btn" class="px-6 py-3 bg-[#7f5af0] hover:bg-[#5d51f2] text-white font-semibold rounded-md transition-colors duration-300">
+                        Get Recommendations
+                    </button>
+                </div>
+                <div id="recommendations-results" class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Recommendations will be injected here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Personalized Dashboard Section (Initially Hidden) -->
+    <section id="dashboard-section" class="py-20 md:py-32 px-6 hidden scroll-animation">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0]">Your Personalized Dashboard</h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-12">This is your space to track and plan your future.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
+                <!-- Left Column: Saved Data -->
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="p-8 card-bg">
+                        <h3 class="text-2xl font-semibold mb-4 text-white">Your Saved Career Paths</h3>
+                        <div id="dashboard-career-cards" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Saved career cards will be injected here -->
+                        </div>
+                    </div>
+                     <div class="p-8 card-bg">
+                        <h3 class="text-2xl font-semibold mb-4 text-white">Your Quiz Result</h3>
+                        <div id="dashboard-quiz-result">
+                            <!-- Quiz result will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Analytics -->
+                <div class="lg:col-span-1 space-y-8">
+                    <div class="p-8 card-bg">
+                        <h3 class="text-2xl font-semibold mb-4 text-white">Career Scope Analysis</h3>
+                        <div id="dashboard-scope-analysis">
+                           <!-- Scope analysis will be injected here -->
+                        </div>
+                    </div>
+                    <div class="p-8 card-bg">
+                        <h3 class="text-2xl font-semibold mb-4 text-white">Popularity Comparison</h3>
+                        <div class="relative h-72">
+                             <canvas id="scope-pie-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section id="quiz" class="py-20 md:py-32 px-6">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0] scroll-animation">
+                Take Our Career Quiz
+            </h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-12 scroll-animation" style="animation-delay: 0.2s;">
+                Not sure where to start? Let us guide you with a fun quiz.
+            </p>
+            <div class="max-w-4xl mx-auto p-8 card-bg scroll-animation" style="animation-delay: 0.4s;">
+                <div id="quiz-container">
+                    <div id="quiz-questions">
+                        <!-- Quiz questions will be dynamically injected here -->
+                    </div>
+                    <div class="mt-8 flex justify-between items-center">
+                        <button id="quiz-prev-btn" class="px-6 py-3 text-lg font-semibold rounded-full bg-[#334155] text-white transition-colors duration-300" style="display:none;">Previous</button>
+                        <div class="flex-grow mx-4">
+                            <div class="h-2 bg-gray-700 rounded-full">
+                                <div id="quiz-progress-bar" class="h-2 bg-[#2cb67d] rounded-full quiz-progress-bar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <button id="quiz-next-btn" class="px-6 py-3 text-lg font-semibold rounded-full bg-[#7f5af0] hover:bg-[#5d51f2] text-white transition-colors duration-300">Next</button>
+                    </div>
+                </div>
+                <div id="quiz-results" class="mt-8" style="display:none;">
+                    <h3 class="text-3xl font-bold text-white mb-4">Your Recommended Career:</h3>
+                    <p id="quiz-result-text" class="text-xl text-gray-300"></p>
+                    <button id="quiz-restart-btn" class="mt-8 px-8 py-3 bg-[#7f5af0] hover:bg-[#5d51f2] text-white font-semibold rounded-full transition-colors duration-300">Retake Quiz</button>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Analytics Section -->
+    <section id="analytics" class="py-20 md:py-32 px-6 bg-slate-900/40">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0] scroll-animation">
+                Analytics for Institutions
+            </h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-16 scroll-animation" style="animation-delay: 0.2s;">
+                Gain valuable insights into student career trends.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 scroll-animation" style="animation-delay: 0.4s;">
+                <!-- Metric Card 1 -->
+                <div class="p-6 card-bg">
+                    <div class="text-4xl text-[#2cb67d] mb-3"><i class="fas fa-users"></i></div>
+                    <div class="text-4xl font-bold">1,200+</div>
+                    <p class="text-gray-400 mt-2">Students Guided</p>
+                </div>
+                <!-- Metric Card 2 -->
+                <div class="p-6 card-bg">
+                    <div class="text-4xl text-[#7f5af0] mb-3"><i class="fas fa-chart-pie"></i></div>
+                    <div class="text-4xl font-bold">85%</div>
+                    <p class="text-gray-400 mt-2">Engagement Rate</p>
+                </div>
+                <!-- Metric Card 3 -->
+                <div class="p-6 card-bg">
+                    <div class="text-4xl text-[#00ffff] mb-3"><i class="fas fa-briefcase"></i></div>
+                    <div class="text-4xl font-bold">Top Path: Tech</div>
+                    <p class="text-gray-400 mt-2">Most Popular Field</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left scroll-animation" style="animation-delay: 0.6s;">
+                <!-- Bar Chart -->
+                <div class="p-8 card-bg">
+                    <h3 class="text-2xl font-semibold mb-4 text-white">Popular Career Paths</h3>
+                    <div class="relative h-96">
+                        <canvas id="career-paths-chart"></canvas>
+                    </div>
+                </div>
+                <!-- Doughnut Chart -->
+                <div class="p-8 card-bg">
+                    <h3 class="text-2xl font-semibold mb-4 text-white">Top Skills in Demand</h3>
+                    <div class="relative h-96">
+                        <canvas id="skills-demand-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="py-20 md:py-32 px-6">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0] scroll-animation">
+                What Our Users Say
+            </h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-12 scroll-animation" style="animation-delay: 0.2s;">
+                Hear from students and counselors who found their path.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Testimonial 1 -->
+                <div class="p-6 card-bg scroll-animation" style="animation-delay: 0.4s;">
+                    <p class="text-gray-300 italic mb-4">"The AI Counselor chatbot is amazing! I had so many questions about career paths after engineering, and Eva gave me clear, instant answers anytime, day or night."</p>
+                    <div class="text-right">
+                        <span class="text-white font-semibold">- Sameer Khan, Student</span>
+                    </div>
+                </div>
+                <!-- Testimonial 2 -->
+                <div class="p-6 card-bg scroll-animation" style="animation-delay: 0.6s;">
+                    <p class="text-gray-300 italic mb-4">"EduAdvisor.Ai has become an invaluable tool for our admissions office. The insights from the analytics dashboard help us understand applicant trends and tailor our outreach."</p>
+                    <div class="text-right">
+                        <span class="text-white font-semibold">- Mrs. Kavita Rao, University Advisor</span>
+                    </div>
+                </div>
+                <!-- Testimonial 3 -->
+                <div class="p-6 card-bg scroll-animation" style="animation-delay: 0.8s;">
+                    <p class="text-gray-300 italic mb-4">"Managing career guidance for hundreds of students was a challenge. Now, the platform's tools help us have much more focused and productive counseling sessions."</p>
+                    <div class="text-right">
+                        <span class="text-white font-semibold">- Mr. Alok Verma, High School Counselor</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Sections -->
+    <div class="flex flex-col md:flex-row justify-center md:space-x-8 py-20 px-6">
+        <!-- Contact Section -->
+        <section id="contact" class="w-full">
+            <div class="container mx-auto text-center">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 text-[#7f5af0] scroll-animation">
+                    Get In Touch
+                </h2>
+                <div class="max-w-lg mx-auto p-8 form-card scroll-animation" style="animation-delay: 0.4s;">
+                    <form id="contact-form" class="space-y-6">
+                        <div>
+                            <input type="text" id="contact-name" placeholder="Your Name" class="w-full p-4 form-input rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0]" required>
+                        </div>
+                        <div>
+                            <input type="email" id="contact-email" placeholder="Your Email" class="w-full p-4 form-input rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0]" required>
+                        </div>
+                        <div>
+                            <textarea id="contact-message" rows="5" placeholder="Your Message" class="w-full p-4 form-input rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0]" required></textarea>
+                        </div>
+                        <button type="submit" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300">
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Social Links Section -->
+    <div class="flex justify-center items-center space-x-6 pb-20 px-6 scroll-animation" style="animation-delay: 0.6s;">
+        <a href="#" class="text-white hover:text-[#7f5af0] transition-colors duration-300 text-3xl"><i class="fab fa-linkedin"></i></a>
+        <a href="#" class="text-white hover:text-[#7f5af0] transition-colors duration-300 text-3xl"><i class="fab fa-twitter-square"></i></a>
+        <a href="#" class="text-white hover:text-[#7f5af0] transition-colors duration-300 text-3xl"><i class="fab fa-facebook-square"></i></a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-8 text-center text-gray-500">
+        <p class="mb-2">&copy; 2025 EduAdvisor.Ai. All Rights Reserved.</p>
+        <p>A project by Team **Career Crafter** for **SIH 2025**</p>
+    </footer>
+
+    <!-- Custom Modals for Confirmation -->
+    <div id="contact-confirmation-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
+        <div class="bg-[#1a1639] p-8 rounded-lg shadow-xl max-w-sm w-full text-center border border-[#5d51f2]">
+            <div class="text-4xl text-[#2cb67d] mb-4">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-2">Message Sent!</h3>
+            <p class="text-gray-400 mb-6">Thank you for your message. We will get back to you shortly.</p>
+            <button id="close-contact-modal-btn" class="px-6 py-3 bg-[#7f5af0] hover:bg-[#5d51f2] text-white font-semibold rounded-md transition-colors duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Chatbot UI -->
+    <div id="chat-bubble">
+        <i class="fas fa-comments text-2xl text-white"></i>
+    </div>
+    <div id="chat-window">
+        <div class="chat-header">
+            <h3 class="text-lg font-semibold">AI Career Counselor</h3>
+            <button id="close-chat-btn" class="text-xl">&times;</button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <!-- Initial bot message -->
+            <div class="chat-message bot">
+                <div class="chat-message-bubble">
+                    Hello! I'm Eva, your AI career counselor. How can I help you today?
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask about careers or skills...">
+            <button id="chat-send-btn" class="chat-send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set Firebase log level for debugging
+        setLogLevel('debug');
+
+        // Global variables for Firebase config and auth token
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth, userId;
+
+        // --- Firebase Initialization and Authentication Logic ---
+        function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                    } else {
+                        if (!initialAuthToken) {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
+
+                if (initialAuthToken) {
+                    signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                        console.error("Custom token sign-in error:", error);
+                        signInAnonymously(auth);
+                    });
+                }
+            } catch (error) {
+                console.error("Firebase init error:", error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeFirebase);
+
+        // --- 3D Hero Section Animation ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('hero-canvas'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        camera.position.z = 5;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 5000;
+        const posArray = new Float32Array(particlesCount * 3);
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 10;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({ size: 0.005, color: 0x888888 });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+        function animate() {
+            requestAnimationFrame(animate);
+            particlesMesh.rotation.x += 0.0005;
+            particlesMesh.rotation.y += 0.0008;
+            renderer.render(scene, camera);
+        }
+        window.onload = animate;
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Mobile Menu Toggle & Navbar Scroll Effect ---
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+        });
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('navbar-scrolled', window.scrollY > 50);
+        });
+
+        // --- Scroll Animations ---
+        const scrollElements = document.querySelectorAll(".scroll-animation");
+        const elementInView = (el, dividend = 1) => el.getBoundingClientRect().top <= (window.innerHeight || document.documentElement.clientHeight) / dividend;
+        const displayScrollElement = (element) => element.classList.add("is-visible");
+        const handleScrollAnimation = () => scrollElements.forEach((el) => {
+            if (elementInView(el, 1.25)) displayScrollElement(el);
+        });
+        window.addEventListener("scroll", handleScrollAnimation);
+        handleScrollAnimation();
+
+        // --- Demo Section Logic (with Gemini API) ---
+        const getRecommendationsBtn = document.getElementById('get-recommendations-btn');
+        const recommendationsResults = document.getElementById('recommendations-results');
+        getRecommendationsBtn.addEventListener('click', async () => {
+            const interestsInput = document.getElementById('interests-input');
+            const input = interestsInput.value.toLowerCase();
+            if (input.trim() === '') {
+                recommendationsResults.innerHTML = '<p class="text-red-400">Please enter some interests.</p>';
+                return;
+            }
+            recommendationsResults.innerHTML = `<div class="md:col-span-2 text-center"><div class="inline-block px-4 py-2 bg-[#2cb67d] text-white rounded-md animate-pulse">Asking the AI...</div></div>`;
+            try {
+                const response = await fetch('/api/recommendations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ interests: input })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'An unknown error occurred.');
+                }
+                const data = await response.json();
+                let html = '<div class="md:col-span-2 text-center text-2xl font-bold mb-4 text-[#7f5af0]">Recommended Careers</div>';
+                data.careers.forEach(rec => {
+                    const careerDataString = JSON.stringify(rec).replace(/'/g, '&apos;');
+                    html += `
+                        <div class="p-6 card-bg flex flex-col items-start hover:shadow-lg transition-shadow duration-300">
+                            <div class="flex items-center space-x-4 mb-4">
+                                <div class="text-4xl text-[#2cb67d]"><i class="${rec.icon}"></i></div>
+                                <div><h3 class="text-xl font-semibold">${rec.career}</h3><p class="text-sm text-gray-400">Career Recommendation</p></div>
+                            </div>
+                            <p class="font-semibold text-white mb-2">What to Study:</p>
+                            <ul class="list-disc list-inside text-gray-400 text-sm">${rec.studies.map(study => `<li>${study}</li>`).join('')}</ul>
+                            <button class="save-career-btn mt-4 px-4 py-2 bg-[#2cb67d] hover:bg-green-600 text-white font-semibold rounded-md text-sm transition-colors duration-300" data-career='${careerDataString}'>
+                                <i class="fas fa-save mr-2"></i>Save to Dashboard
+                            </button>
+                        </div>`;
+                });
+                html += '<div class="md:col-span-2 text-center text-2xl font-bold mt-8 mb-4 text-[#7f5af0]">Hobby Suggestions</div>';
+                data.hobbies.forEach(hobby => {
+                    html += `
+                        <div class="p-6 card-bg flex flex-col items-start hover:shadow-lg transition-shadow duration-300">
+                            <div class="text-4xl text-[#2cb67d]"><i class="${hobby.icon}"></i></div>
+                            <h3 class="text-xl font-semibold mb-2">${hobby.hobby}</h3><p class="text-gray-400">${hobby.description}</p>
+                        </div>`;
+                });
+                recommendationsResults.innerHTML = html;
+            } catch (error) {
+                console.error("Error fetching recommendations:", error);
+                recommendationsResults.innerHTML = `<p class="md:col-span-2 text-red-400 text-center">Error: ${error.message}</p>`;
+            }
+        });
+
+        // --- Contact Form Logic (with Firestore) ---
+        const contactForm = document.getElementById('contact-form');
+        const contactConfirmationModal = document.getElementById('contact-confirmation-modal');
+        const closeContactModalBtn = document.getElementById('close-contact-modal-btn');
+        contactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userId) { return; }
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/contacts`), {
+                    name: document.getElementById('contact-name').value,
+                    email: document.getElementById('contact-email').value,
+                    message: document.getElementById('contact-message').value,
+                    userId: userId,
+                    timestamp: serverTimestamp()
+                });
+                contactForm.reset();
+                contactConfirmationModal.classList.remove('hidden');
+            } catch (error) {
+                console.error("Error submitting contact form:", error);
+            }
+        });
+        closeContactModalBtn.addEventListener('click', () => contactConfirmationModal.classList.add('hidden'));
+        contactConfirmationModal.addEventListener('click', (e) => {
+            if (e.target === contactConfirmationModal) contactConfirmationModal.classList.add('hidden');
+        });
+
+        // --- Quiz Logic ---
+        const quizContainer = document.getElementById('quiz-container');
+        const quizQuestionsEl = document.getElementById('quiz-questions');
+        const quizNextBtn = document.getElementById('quiz-next-btn');
+        const quizPrevBtn = document.getElementById('quiz-prev-btn');
+        const quizProgressBar = document.getElementById('quiz-progress-bar');
+        const quizResultsEl = document.getElementById('quiz-results');
+        const quizResultText = document.getElementById('quiz-result-text');
+        const quizRestartBtn = document.getElementById('quiz-restart-btn');
+        let currentQuestionIndex = 0;
+        let userAnswers = [];
+        const quizQuestions = [
+            { question: "What kind of tasks do you enjoy most?", options: [{ text: "Solving complex, logical puzzles.", score: 0 }, { text: "Creating beautiful and visually appealing designs.", score: 1 }, { text: "Working with numbers and financial data.", score: 2 }, { text: "Helping people and leading teams.", score: 3 }] },
+            { question: "Which subject interests you the most?", options: [{ text: "Mathematics and Science.", score: 0 }, { text: "Art and Design.", score: 1 }, { text: "Economics and Business.", score: 2 }, { text: "Psychology and Sociology.", score: 3 }] },
+            { question: "What is your ideal work environment?", options: [{ text: "A fast-paced, innovative tech company.", score: 0 }, { text: "A creative studio or a design agency.", score: 1 }, { text: "A structured, formal office setting.", score: 2 }, { text: "A collaborative, team-oriented workplace.", score: 3 }] },
+            { question: "How do you prefer to solve problems?", options: [{ text: "By breaking them down into logical steps and writing code.", score: 0 }, { text: "By brainstorming creative and out-of-the-box ideas.", score: 1 }, { text: "By analyzing data and financial reports.", score: 2 }, { text: "By talking to people and understanding their needs.", score: 3 }] },
+            { question: "Which of these skills would you like to develop?", options: [{ text: "Programming languages like Python and C++.", score: 0 }, { text: "Mastering design software like Photoshop and Illustrator.", score: 1 }, { text: "Financial modeling and strategic planning.", score: 2 }, { text: "Public speaking and team management.", score: 3 }] }
+        ];
+        const quizResultsMap = [
+            { range: [0, 4], career: "Software Developer", icon: 'fas fa-code', description: "You have a knack for logic and problem-solving, making you a great fit for a career in software development." },
+            { range: [5, 9], career: "UX/UI Designer", icon: 'fas fa-paint-brush', description: "Your creative mind and eye for aesthetics point toward a career in UX/UI design." },
+            { range: [10, 14], career: "Financial Analyst", icon: 'fas fa-chart-pie', description: "Your preference for numbers and structured environments makes you a strong candidate for a financial analyst." },
+            { range: [15, 19], career: "Project Manager", icon: 'fas fa-project-diagram', description: "You have natural leadership and communication skills, which are perfect for a project management role." }
+        ];
+
+        function renderQuestion() {
+            const questionData = quizQuestions[currentQuestionIndex];
+            quizQuestionsEl.innerHTML = `<p class="text-xl md:text-2xl font-semibold mb-6 text-white">${currentQuestionIndex + 1}. ${questionData.question}</p><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${questionData.options.map((option, index) => `<button class="quiz-option p-6 card-bg rounded-lg text-left hover:border-[#5d51f2] border-2 border-transparent transition-all duration-300" data-score="${option.score}" data-index="${index}">${option.text}</button>`).join('')}</div>`;
+            document.querySelectorAll('.quiz-option').forEach(button => button.addEventListener('click', () => {
+                userAnswers[currentQuestionIndex] = parseInt(button.getAttribute('data-score'));
+                document.querySelectorAll('.quiz-option').forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                updateButtonStates();
+            }));
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            quizPrevBtn.style.display = currentQuestionIndex > 0 ? 'block' : 'none';
+            quizNextBtn.innerText = currentQuestionIndex === quizQuestions.length - 1 ? 'Finish' : 'Next';
+            quizNextBtn.disabled = userAnswers[currentQuestionIndex] === undefined;
+            const progress = ((currentQuestionIndex + (userAnswers[currentQuestionIndex] !== undefined ? 1 : 0)) / quizQuestions.length) * 100;
+            quizProgressBar.style.width = `${progress}%`;
+        }
+
+        function showResults() {
+            quizContainer.style.display = 'none';
+            quizResultsEl.style.display = 'block';
+            const totalScore = userAnswers.reduce((sum, score) => sum + score, 0);
+            let result = quizResultsMap.find(res => totalScore >= res.range[0] && totalScore <= res.range[1]);
+            if (!result) result = { career: "Career Explorer", icon: 'fas fa-search', description: "Your answers show a wide range of interests! Continue to explore different fields to find your passion." };
+            quizResultText.innerHTML = `<span class="font-bold">${result.career}:</span> ${result.description}`;
+            
+            // Save to dashboard
+            addQuizResultToDashboard(result);
+        }
+
+        quizNextBtn.addEventListener('click', () => {
+            if (userAnswers[currentQuestionIndex] === undefined) return;
+            if (currentQuestionIndex < quizQuestions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+            } else {
+                showResults();
+            }
+        });
+        quizPrevBtn.addEventListener('click', () => { if (currentQuestionIndex > 0) { currentQuestionIndex--; renderQuestion(); } });
+        quizRestartBtn.addEventListener('click', () => { currentQuestionIndex = 0; userAnswers = []; quizContainer.style.display = 'block'; quizResultsEl.style.display = 'none'; renderQuestion(); });
+        renderQuestion();
+        
+        // --- NEW DASHBOARD LOGIC ---
+        const dashboardSection = document.getElementById('dashboard-section');
+        const dashboardCareerCards = document.getElementById('dashboard-career-cards');
+        const dashboardQuizResult = document.getElementById('dashboard-quiz-result');
+        const dashboardScopeAnalysis = document.getElementById('dashboard-scope-analysis');
+        const scopePieChartCanvas = document.getElementById('scope-pie-chart');
+        let scopePieChart = null;
+
+        let userDashboardData = {
+            savedCareers: [],
+            quizResult: null,
+        };
+        
+        const scopeMap = {
+            'default': { scope: 'Stable', description: 'This field has consistent demand.' },
+            'Software Engineer': { scope: 'High Growth', description: 'Jobs in this field are expanding rapidly with technology.' },
+            'Data Scientist': { scope: 'High Growth', description: 'A top field due to the increasing demand for data-driven decisions.' },
+            'UX/UI Designer': { scope: 'High Growth', description: 'High demand due to the growing focus on better user experiences.' },
+            'Project Manager': { scope: 'Stable', description: 'Skilled project managers are needed in every industry.' },
+        };
+        
+        const popularityData = {
+            'Software Engineer': 25,
+            'Data Scientist': 20,
+            'UX/UI Designer': 15,
+            'Project Manager': 10,
+            'Marketing': 8,
+            'Finance': 7
+        };
+
+        function addCareerToDashboard(careerData) {
+            // Avoid duplicates
+            if (!userDashboardData.savedCareers.some(c => c.career === careerData.career)) {
+                userDashboardData.savedCareers.push(careerData);
+                renderDashboard();
+            }
+        }
+
+        function addQuizResultToDashboard(quizResult) {
+            userDashboardData.quizResult = quizResult;
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            if (userDashboardData.savedCareers.length === 0 && !userDashboardData.quizResult) {
+                return; // Don't show dashboard if empty
+            }
+
+            dashboardSection.classList.remove('hidden');
+            setTimeout(() => dashboardSection.classList.add('is-visible'), 100);
+
+            // 1. Render Saved Career Cards
+            if (userDashboardData.savedCareers.length > 0) {
+                 dashboardCareerCards.innerHTML = userDashboardData.savedCareers.map(rec => `
+                    <div class="p-4 card-bg rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-3xl text-[#2cb67d]"><i class="${rec.icon}"></i></div>
+                            <div><h4 class="text-lg font-semibold">${rec.career}</h4></div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                 dashboardCareerCards.innerHTML = `<p class="text-gray-400 md:col-span-2">You haven't saved any careers yet.</p>`;
+            }
+
+            // 2. Render Quiz Result
+            if (userDashboardData.quizResult) {
+                const quizRes = userDashboardData.quizResult;
+                 dashboardQuizResult.innerHTML = `
+                    <div class="p-4 card-bg rounded-lg">
+                         <div class="flex items-center space-x-3 mb-2">
+                            <div class="text-3xl text-[#7f5af0]"><i class="${quizRes.icon}"></i></div>
+                            <div><h4 class="text-lg font-semibold">${quizRes.career}</h4></div>
+                        </div>
+                        <p class="text-sm text-gray-300">${quizRes.description}</p>
+                    </div>`;
+            } else {
+                dashboardQuizResult.innerHTML = `<p class="text-gray-400">Your career quiz result will appear here.</p>`;
+            }
+            
+            // 3. Render Scope Analysis and Pie Chart (based on the last added item)
+            const lastSavedCareer = userDashboardData.savedCareers[userDashboardData.savedCareers.length - 1];
+            const careerForAnalysis = lastSavedCareer || userDashboardData.quizResult;
+
+            if (careerForAnalysis) {
+                const scopeInfo = scopeMap[careerForAnalysis.career] || scopeMap['default'];
+                dashboardScopeAnalysis.innerHTML = `
+                    <h4 class="text-lg font-bold text-white">${careerForAnalysis.career}</h4>
+                    <p class="text-2xl font-semibold my-2 ${scopeInfo.scope === 'High Growth' ? 'text-green-400' : 'text-blue-400'}">${scopeInfo.scope}</p>
+                    <p class="text-sm text-gray-400">${scopeInfo.description}</p>
+                `;
+                renderScopePieChart(careerForAnalysis.career);
+            } else {
+                 dashboardScopeAnalysis.innerHTML = `<p class="text-gray-400">Analysis will appear here when you save a career.</p>`;
+            }
+             
+            dashboardSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderScopePieChart(selectedCareer) {
+            if (scopePieChart) {
+                scopePieChart.destroy();
+            }
+            
+            const chartData = {...popularityData};
+            if (!chartData[selectedCareer]) {
+                 chartData[selectedCareer] = 5; // Add a default value if not in the top list
+            }
+
+            scopePieChart = new Chart(scopePieChartCanvas, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(chartData),
+                    datasets: [{
+                        data: Object.values(chartData),
+                        backgroundColor: ['#2cb67d', '#7f5af0', '#00ffff', '#ff3399', '#ff9f40', '#4bc0c0', '#9966ff'],
+                        borderColor: '#1a1639',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#ecf0f1',
+                                padding: 10,
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        document.body.addEventListener('click', function(e) {
+            if (e.target.closest('.save-career-btn')) {
+                const button = e.target.closest('.save-career-btn');
+                const careerData = JSON.parse(button.dataset.career.replace(/'/g, '"'));
+                addCareerToDashboard(careerData);
+            }
+        });
+        
+        // --- Analytics Charts ---
+        const initAnalyticsCharts = () => {
+            const careerPathsCtx = document.getElementById('career-paths-chart');
+            if (careerPathsCtx) {
+                new Chart(careerPathsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Software Dev', 'Data Science', 'UX/UI Design', 'Project Mgmt', 'Marketing'],
+                        datasets: [{
+                            label: '# of Students Interested',
+                            data: [120, 95, 70, 65, 50],
+                            backgroundColor: 'rgba(44, 182, 125, 0.6)',
+                            borderColor: 'rgba(44, 182, 125, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        scales: { y: { ticks: { color: '#ecf0f1' } }, x: { ticks: { color: '#ecf0f1' } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            const skillsDemandCtx = document.getElementById('skills-demand-chart');
+            if (skillsDemandCtx) {
+                new Chart(skillsDemandCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Python', 'JavaScript', 'SQL', 'Machine Learning', 'Agile'],
+                        datasets: [{
+                            label: 'Skill Demand',
+                            data: [300, 250, 200, 180, 150],
+                            backgroundColor: ['#2cb67d', '#7f5af0', '#00ffff', '#ff3399', '#ff9f40'],
+                            borderColor: '#1a1639',
+                            borderWidth: 3,
+                        }]
+                    },
+                    options: {
+                         plugins: { legend: { position: 'bottom', labels: { color: '#ecf0f1' } } }
+                    }
+                });
+            }
+        };
+        initAnalyticsCharts();
+
+
+        // --- Chatbot Logic ---
+        const chatBubble = document.getElementById('chat-bubble');
+        const chatWindow = document.getElementById('chat-window');
+        const closeChatBtn = document.getElementById('close-chat-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+        let chatHistory = [{ role: "model", parts: [{ text: "Hello! I'm Eva, your AI career counselor. How can I help you today?" }] }];
+        chatBubble.addEventListener('click', () => chatWindow.classList.toggle('open'));
+        closeChatBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
+        const addMessageToUI = (sender, message) => {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', sender);
+            const bubbleElement = document.createElement('div');
+            bubbleElement.classList.add('chat-message-bubble');
+            bubbleElement.textContent = message;
+            messageElement.appendChild(bubbleElement);
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        };
+        const handleSendMessage = async () => {
+            const userMessage = chatInput.value.trim();
+            if (!userMessage) return;
+            addMessageToUI('user', userMessage);
+            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+            chatInput.value = '';
+            const typingIndicator = document.createElement('div');
+            typingIndicator.classList.add('chat-message', 'bot');
+            typingIndicator.innerHTML = `<div class="chat-message-bubble">Typing...</div>`;
+            chatMessages.appendChild(typingIndicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory })
+                });
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const data = await response.json();
+                const botMessage = data.message;
+                chatMessages.removeChild(typingIndicator);
+                addMessageToUI('bot', botMessage);
+                chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
+            } catch (error) {
+                console.error('Chatbot error:', error);
+                chatMessages.removeChild(typingIndicator);
+                addMessageToUI('bot', 'Sorry, I seem to be having trouble connecting. Please try again in a moment.');
+            }
+        };
+        chatSendBtn.addEventListener('click', handleSendMessage);
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
+    </script>
+</body>
+</html>
+
