@@ -67,6 +67,10 @@
         .glow-button:hover::before {
             left: 100%;
         }
+        .glow-button:disabled {
+            background-color: #4a4a6a;
+            cursor: not-allowed;
+        }
         .modal {
             transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
         }
@@ -521,6 +525,7 @@
                         <button type="submit" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300">
                             Send Message
                         </button>
+                        <div id="contact-form-status" class="mt-4 text-center text-sm"></div>
                     </form>
                 </div>
             </div>
@@ -528,17 +533,14 @@
     </div>
 
     <!-- Social Links Section -->
-    <div class="flex justify-center items-center space-x-6 pb-20 px-6 scroll-animation" style="animation-delay: 0.6s;">
+    <div class="flex justify-center items-center space-x-6 pb-20 px-6">
         <a href="#" class="text-white hover:text-[#7f5af0] transition-colors duration-300 text-3xl"><i class="fab fa-linkedin"></i></a>
         <a href="#" class="text-white hover:text-[#7f5af0] transition-colors duration-300 text-3xl"><i class="fab fa-twitter-square"></i></a>
         <a href="#" class="text-white hover:text-[#7f5af0] transition-colors duration-300 text-3xl"><i class="fab fa-facebook-square"></i></a>
     </div>
 
-    <!-- Footer -->
-    <footer class="py-8 text-center text-gray-500">
-        <p class="mb-2">&copy; 2025 EduAdvisor.Ai. All Rights Reserved.</p>
-        <p>A project by Team **Career Crafter** for **SIH 2025**</p>
-    </footer>
+    <!-- Footer is intentionally empty -->
+    <footer class="py-4"></footer>
 
     <!-- Custom Modals for Confirmation -->
     <div id="contact-confirmation-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
@@ -734,9 +736,18 @@
         const contactForm = document.getElementById('contact-form');
         const contactConfirmationModal = document.getElementById('contact-confirmation-modal');
         const closeContactModalBtn = document.getElementById('close-contact-modal-btn');
+        const contactFormStatus = document.getElementById('contact-form-status');
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!userId) { return; }
+            const submitButton = contactForm.querySelector('button[type="submit"]');
+            if (!auth || !db || !userId) {
+                contactFormStatus.textContent = 'Connecting to the server, please wait a moment and try again.';
+                contactFormStatus.className = 'mt-4 text-center text-sm text-yellow-400';
+                return;
+            }
+            submitButton.disabled = true;
+            submitButton.textContent = 'Sending...';
+            contactFormStatus.textContent = '';
             try {
                 await addDoc(collection(db, `artifacts/${appId}/public/data/contacts`), {
                     name: document.getElementById('contact-name').value,
@@ -749,6 +760,11 @@
                 contactConfirmationModal.classList.remove('hidden');
             } catch (error) {
                 console.error("Error submitting contact form:", error);
+                contactFormStatus.textContent = 'Sorry, something went wrong. Please try again.';
+                contactFormStatus.className = 'mt-4 text-center text-sm text-red-400';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Send Message';
             }
         });
         closeContactModalBtn.addEventListener('click', () => contactConfirmationModal.classList.add('hidden'));
