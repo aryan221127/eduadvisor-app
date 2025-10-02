@@ -522,8 +522,8 @@
                         <div>
                             <textarea id="contact-message" rows="5" placeholder="Your Message" class="w-full p-4 form-input rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0]" required></textarea>
                         </div>
-                        <button type="submit" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300">
-                            Send Message
+                        <button type="submit" id="contact-submit-btn" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300" disabled>
+                            Connecting...
                         </button>
                         <div id="contact-form-status" class="mt-4 text-center text-sm"></div>
                     </form>
@@ -596,6 +596,7 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let db, auth, userId;
+        let isFirebaseReady = false;
 
         // --- Firebase Initialization and Authentication Logic ---
         function initializeFirebase() {
@@ -603,10 +604,18 @@
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                
+                const contactSubmitBtn = document.getElementById('contact-submit-btn');
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
+                        isFirebaseReady = true;
+                        // Enable the contact form button once authenticated
+                        if (contactSubmitBtn) {
+                            contactSubmitBtn.disabled = false;
+                            contactSubmitBtn.textContent = 'Send Message';
+                        }
                     } else {
                         if (!initialAuthToken) {
                             await signInAnonymously(auth);
@@ -740,14 +749,17 @@
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitButton = contactForm.querySelector('button[type="submit"]');
-            if (!auth || !db || !userId) {
+
+            if (!isFirebaseReady) {
                 contactFormStatus.textContent = 'Connecting to the server, please wait a moment and try again.';
                 contactFormStatus.className = 'mt-4 text-center text-sm text-yellow-400';
                 return;
             }
+
             submitButton.disabled = true;
             submitButton.textContent = 'Sending...';
             contactFormStatus.textContent = '';
+
             try {
                 await addDoc(collection(db, `artifacts/${appId}/public/data/contacts`), {
                     name: document.getElementById('contact-name').value,
