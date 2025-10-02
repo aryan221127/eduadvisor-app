@@ -523,7 +523,7 @@
                             <textarea id="contact-message" rows="5" placeholder="Your Message" class="w-full p-4 form-input rounded-md focus:outline-none focus:ring-2 focus:ring-[#7f5af0]" required></textarea>
                         </div>
                         <button type="submit" id="contact-submit-btn" class="glow-button w-full px-8 py-4 text-lg font-semibold rounded-md bg-[#7f5af0] text-white transition-colors duration-300" disabled>
-                            Connecting...
+                            Send Message
                         </button>
                         <div id="contact-form-status" class="mt-4 text-center text-sm"></div>
                     </form>
@@ -614,7 +614,6 @@
                         // Enable the contact form button once authenticated
                         if (contactSubmitBtn) {
                             contactSubmitBtn.disabled = false;
-                            contactSubmitBtn.textContent = 'Send Message';
                         }
                     } else {
                         if (!initialAuthToken) {
